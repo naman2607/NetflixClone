@@ -1,0 +1,11 @@
+{
+    "SERVER_PORT": "8083",
+    "POSTGRES_DB": {
+        "host": "localhost",
+        "port": 5433,
+        "user": "postgres",
+        "password": "1234",
+        "dbname": "netflix"
+    },
+    "JWT_SECRET" : "NMN@45"
+}
