@@ -46,16 +46,16 @@ func InsertUserIntoDatabase(user user.UserBasicDetails) error {
 	return err
 }
 
-func GetUser(email string) (*sql.Row, error) {
+func GetUser(email string) (user.UserBasicDetails, error) {
+	var user user.UserBasicDetails
 	err := database.ExecuteTransactional(context.Background(), func(ctx context.Context, tx *sql.Tx) error {
-		query := "SELECT * FROM users WHERE email=$1"
+		query := "SELECT username, email, password FROM users WHERE email = $1"
 		rows := tx.QueryRowContext(ctx, query, email)
-		// if err != nil {
-		// 	log.Println("Error in getting user with email ", email, " ", err)
-		// 	return nil, err
-		// }
-		log.Println(rows)
+		err := rows.Scan(&user.Username, &user.Email, &user.Password)
+		if err != nil {
+			log.Println("eror in scanning get user row", err)
+		}
 		return nil
 	})
-	return nil, err
+	return user, err
 }

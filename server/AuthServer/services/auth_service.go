@@ -7,21 +7,18 @@ import (
 	"encoding/hex"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 	authDao "github.com/naman2607/netflixClone/dao"
 	user "github.com/naman2607/netflixClone/models"
+	jwtHelper "github.com/naman2607/netflixClone/utils"
 )
 
 type ServiceResponse struct {
 	Message    string
 	StatusCode int
 	JwtToken   string
-}
-
-type CustomClaim struct {
-	Email string `json:"email"`
-	jwt.StandardClaims
 }
 
 func getHashedPassword(password string) string {
@@ -46,19 +43,7 @@ func SignupService(username string, email string, password string) *ServiceRespo
 		response.Message = "User Already Exists"
 		return &response
 	}
-	// claims := CustomClaim{
-	// 	email,
-	// 	jwt.StandardClaims{
-	// 		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-	// 		Issuer:    "netflix",
-	// 	},
-	// }
-	// token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// conf := config.GetInstance()
-	// secret := []byte(conf.GetSecretKey())
-	// tokenString, _ := token.SignedString(secret)
-	// log.Println("jwt token : ", tokenString)
-	// response.JwtToken = tokenString
+
 	var user user.UserBasicDetails
 	user.Username = username
 	user.Email = email
@@ -76,7 +61,6 @@ func SignupService(username string, email string, password string) *ServiceRespo
 }
 
 func Signin(email string, password string) *ServiceResponse {
-	log.Println("Signin service called", email, password)
 	userExists, err := authDao.CheckIfUserExists(email)
 	var response ServiceResponse
 
@@ -93,8 +77,26 @@ func Signin(email string, password string) *ServiceResponse {
 		return &response
 	}
 
-	authDao.GetUser(email)
+	user, err := authDao.GetUser(email)
+	if err != nil {
+		response.StatusCode = http.StatusInternalServerError
+		return &response
+	}
 	hashedPassword := getHashedPassword(password)
-	log.Println(err, hashedPassword)
+	if user.Password != hashedPassword {
+		response.StatusCode = http.StatusUnauthorized
+		response.Message = "Passwod is incorrect"
+		return &response
+	}
+	claims := jwtHelper.CustomClaim{
+		Email: email,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+			Issuer:    "netflix",
+		},
+	}
+	token := jwtHelper.CreateNewToken(claims)
+	response.Message = "Login Successful"
+	response.JwtToken = token
 	return &response
 }
